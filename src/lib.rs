@@ -1,15 +1,32 @@
 //! A crate for simple debug output, with optional coloured output
+#![warn(missing_docs)]
+
+use std::io::{self, Write};
+use std::sync::{LazyLock, Mutex};
+
+/// A writer which we can send debug logs to
+pub type Writer = Box<dyn Write + Send>;
+
+static DEBUG_WRITER: LazyLock<Mutex<Writer>> = LazyLock::new(|| Mutex::new(Box::new(io::stderr())));
+
+/// Set the writer for debug output
+///
+/// # Arguments
+/// * `writer` - the Writer which we should switch to for debugs
+pub fn set_debug_writer(writer: Writer) {
+    *DEBUG_WRITER.lock().unwrap() = writer;
+}
 
 #[cfg(feature = "color")]
 mod dbgout_colorized {
-    use crate::DebugInfo;
+    use crate::{DEBUG_WRITER, DebugInfo};
     use colored::{Color, Colorize};
     use std::sync::{LazyLock, Mutex};
 
     static DEBUG_COLOR: LazyLock<Mutex<Color>> = LazyLock::new(|| Mutex::new(Color::Yellow));
 
     fn get_debug_color() -> Color {
-        DEBUG_COLOR.lock().unwrap().clone()
+        *DEBUG_COLOR.lock().unwrap()
     }
 
     pub(crate) fn debug_color_print(info: DebugInfo, text: std::fmt::Arguments) {
@@ -18,7 +35,11 @@ mod dbgout_colorized {
             info.file, info.line, info.col, info.mod_path, text
         );
 
-        eprintln!("{}", formatted_text.color(get_debug_color()));
+        let _ = writeln!(
+            DEBUG_WRITER.lock().unwrap(),
+            "{}",
+            formatted_text.color(get_debug_color())
+        );
     }
 
     /// Sets the colour to use if the "color" feature is enabled
@@ -50,9 +71,13 @@ pub struct DebugInfo {
     pub debug_mode: bool,
 }
 
-/// A function which tells us if the `--debug` program argument was passed
-pub fn has_debug_flag() -> bool {
-    std::env::args().any(|a| a == "--debug")
+/// A function to tell if we're in debug mode
+///
+/// # Returns
+/// * If the `--debug` program argument is passed => true
+/// * If `should_check_build` is `true` and its a Debug build => true
+pub fn has_debug_flag(should_check_build: bool) -> bool {
+    std::env::args().any(|a| a == "--debug") || (should_check_build && cfg!(debug_assertions))
 }
 
 /// A macro which retrieves gets a `DebugInfo` struct for the current location
@@ -61,13 +86,35 @@ pub fn has_debug_flag() -> bool {
 /// Force enable/disable the `debug_mode` struct member
 /// * `get_dbginfo!(true)`
 /// * `get_dbginfo!(false)`
+///
 /// Set the `debug_mode` member based on if the `--debug` program argument was passed
-/// * `get_dbfinfo!()
+/// * `get_dbginfo!()`
+///
+/// Set the `debug_mode` member if we are on a debug build or the `--debug` argument was passed
+/// * `get_dbginfo!(auto)`
 ///
 /// # Returns
 /// A `DebugInfo` struct
 #[macro_export]
 macro_rules! get_dbginfo {
+    () => {
+        $crate::DebugInfo {
+            line: line!(),
+            col: column!(),
+            file: file!(),
+            mod_path: module_path!(),
+            debug_mode: $crate::has_debug_flag(false),
+        }
+    };
+    (auto) => {
+        $crate::DebugInfo {
+            line: line!(),
+            col: column!(),
+            file: file!(),
+            mod_path: module_path!(),
+            debug_mode: $crate::has_debug_flag(true),
+        }
+    };
     ($debug_mode:literal) => {
         $crate::DebugInfo {
             line: line!(),
@@ -77,55 +124,63 @@ macro_rules! get_dbginfo {
             debug_mode: $debug_mode,
         }
     };
-
-    () => {
-        $crate::DebugInfo {
-            line: line!(),
-            col: column!(),
-            file: file!(),
-            mod_path: module_path!(),
-            debug_mode: has_debug_flag(),
-        }
-    };
 }
 
 #[doc(hidden)]
 pub fn debug_impl(info: DebugInfo, text: std::fmt::Arguments) {
     if info.debug_mode {
         #[cfg(not(feature = "color"))]
-        eprintln!(
+        let _ = writeln!(
+            DEBUG_WRITER.lock().unwrap(),
             "[debug {} @ {}:{} ({})] {}",
-            info.file, info.line, info.col, info.mod_path, text
+            info.file,
+            info.line,
+            info.col,
+            info.mod_path,
+            text
         );
         #[cfg(feature = "color")]
         crate::dbgout_colorized::debug_color_print(info, text);
     }
 }
 
-/// A macro to print debug info
+/// A macro to write debug info
+///
 /// It will print info in the format
 /// `[debug file @ line:column (module_name)] debug_text`
+/// It will print to the current writer (modified with `set_debug_writer`) by default `std::io::stderr()`
 ///
-/// # Arguments
-/// * `$debug_mode` (optional) - Force enable/disable debug printing
-/// * `$($arg)*` - The debug text to print, uses the same format as `format!()`
+/// # Usage
+/// Force enable/disable printing
+/// * `debug!(true, "debug_text")`
+/// * `debug!(false, "debug_text")`
 ///
+/// Print based on if the `--debug` program argument was passed
+/// * `debug!("debug_text")`
+///
+/// Print if we are on a debug build or the `--debug` argument was passed
+/// * `debug!(auto, "debug_text")`
 /// # Examples
 ///
 /// Force enable debug output
-/// ```rust
+/// ```rust,ignore
+/// use dbgout::debug;
 /// debug!(true, "read data from file \"{}\": {:#?}", file_name, data)
 /// ```
 /// Print some debug output based on if the `--debug` program argument was passed
 /// ```rust
+/// use dbgout::debug;
 /// debug!("Test Print: {}", 123);
 /// ```
 #[macro_export]
 macro_rules! debug {
-    ($($arg:tt)*) => {
-        $crate::debug_impl($crate::get_dbginfo!(), format_args!($($arg)*))
+    (auto, $($arg:tt)*) => {
+        $crate::debug_impl($crate::get_dbginfo!(auto), format_args!($($arg)*))
     };
     ($debug_mode:literal, $($arg:tt)*) => {
         $crate::debug_impl($crate::get_dbginfo!($debug_mode), format_args!($($arg)*))
+    };
+    ($($arg:tt)*) => {
+        $crate::debug_impl($crate::get_dbginfo!(), format_args!($($arg)*))
     };
 }
