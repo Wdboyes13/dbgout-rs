@@ -1,0 +1,21 @@
+[package]
+name = "dbgout"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/Wdboyes13/dbgout-rs"
+authors = ["Wdboyes13 <willdev2025@outlook.com>"]
+description = "A crate for simple debug output, with optional coloured output"
+
+[lib]
+name = "dbgout"
+path = "src/lib.rs"
+
+[features]
+color = ["colored"]
+
+[dependencies]
+colored = { version = "3.1.1", optional = true }
+
+[package.metadata.docs.rs]
+all-features = true
