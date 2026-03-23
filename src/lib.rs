@@ -177,8 +177,11 @@ macro_rules! debug {
     (auto, $($arg:tt)*) => {
         $crate::debug_impl($crate::get_dbginfo!(auto), format_args!($($arg)*))
     };
-    ($debug_mode:literal, $($arg:tt)*) => {
-        $crate::debug_impl($crate::get_dbginfo!($debug_mode), format_args!($($arg)*))
+    (true, $($arg:tt)*) => {
+        $crate::debug_impl($crate::get_dbginfo!(true), format_args!($($arg)*))
+    };
+    (false, $($arg:tt)*) => {
+        $crate::debug_impl($crate::get_dbginfo!(false), format_args!($($arg)*))
     };
     ($($arg:tt)*) => {
         $crate::debug_impl($crate::get_dbginfo!(), format_args!($($arg)*))

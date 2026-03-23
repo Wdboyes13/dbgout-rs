@@ -1,8 +1,3 @@
-## [2.0.0] - 2026-03-22
-### Added
-- Custom writer support via `set_debug_writer`
-- `auto` mode for `debug!` and `get_dbginfo!`
-
-### Changed
-- `get_dbginfo!` on `auto` and boolean literals now uses `$crate::has_debug_flag` instead of just `has_debug_flag`
-- `has_debug_flag` now takes a `should_check_build` argument
+## [2.1.0] - 2026-03-23
+### Fixed
+- `debug!` matching `$debug_mode:literal` on non-boolean literals

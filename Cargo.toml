@@ -1,6 +1,6 @@
 [package]
 name = "dbgout"
-version = "2.0.0"
+version = "2.1.0"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/Wdboyes13/dbgout-rs"
@@ -10,6 +10,12 @@ description = "A crate for simple debug output, with optional coloured output"
 [lib]
 name = "dbgout"
 path = "src/lib.rs"
+
+[[bin]]
+name = "dbgout_example"
+path = "example/main.rs"
+publish = false
+required-features = ["color"]
 
 [features]
 color = ["colored"]

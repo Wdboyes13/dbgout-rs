@@ -1,5 +1,9 @@
 # Changlog
 
+## [2.1.0] - 2026-03-23
+### Fixed
+- `debug!` matching `$debug_mode:literal` on non-boolean literals
+
 ## [2.0.0] - 2026-03-22
 ### Added
 - Custom writer support via `set_debug_writer`
