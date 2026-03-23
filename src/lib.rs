@@ -154,12 +154,17 @@ pub fn debug_impl(info: DebugInfo, text: std::fmt::Arguments) {
 /// Force enable/disable printing
 /// * `debug!(true, "debug_text")`
 /// * `debug!(false, "debug_text")`
+/// * `debug!(true)`
+/// * `debug!(false)`
 ///
 /// Print based on if the `--debug` program argument was passed
 /// * `debug!("debug_text")`
+/// * `debug!()`
 ///
 /// Print if we are on a debug build or the `--debug` argument was passed
 /// * `debug!(auto, "debug_text")`
+/// * `debug!(auto)`
+///
 /// # Examples
 ///
 /// Force enable debug output
@@ -172,6 +177,11 @@ pub fn debug_impl(info: DebugInfo, text: std::fmt::Arguments) {
 /// use dbgout::debug;
 /// debug!("Test Print: {}", 123);
 /// ```
+/// Just print the debug info
+/// ```rust
+/// use dbgout::debug;
+/// debug!();
+/// ```
 #[macro_export]
 macro_rules! debug {
     (auto, $($arg:tt)*) => {
@@ -182,6 +192,18 @@ macro_rules! debug {
     };
     (false, $($arg:tt)*) => {
         $crate::debug_impl($crate::get_dbginfo!(false), format_args!($($arg)*))
+    };
+    (auto) => {
+        $crate::debug_impl($crate::get_dbginfo!(auto), format_args!(""))
+    };
+    (true) => {
+        $crate::debug_impl($crate::get_dbginfo!(true), format_args!(""))
+    };
+    (false) => {
+        $crate::debug_impl($crate::get_dbginfo!(false), format_args!(""))
+    };
+    () => {
+        $crate::debug_impl($crate::get_dbginfo!(), format_args!(""))
     };
     ($($arg:tt)*) => {
         $crate::debug_impl($crate::get_dbginfo!(), format_args!($($arg)*))

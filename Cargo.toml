@@ -1,11 +1,12 @@
 [package]
 name = "dbgout"
-version = "2.1.0"
+version = "2.2.0"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/Wdboyes13/dbgout-rs"
 authors = ["Wdboyes13 <willdev2025@outlook.com>"]
 description = "A crate for simple debug output, with optional coloured output"
+exclude = ["example/*"]
 
 [lib]
 name = "dbgout"
