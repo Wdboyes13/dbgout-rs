@@ -15,7 +15,6 @@ path = "src/lib.rs"
 [[bin]]
 name = "dbgout_example"
 path = "example/main.rs"
-publish = false
 required-features = ["color"]
 
 [features]
